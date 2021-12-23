@@ -1,4 +1,5 @@
-import {ApolloServer, gql} from 'apollo-server'
+import {ApolloServer, UserInputError, gql} from 'apollo-server'
+import {v1 as uuid} from 'uuid'
 
 const persons = [
     {
@@ -12,17 +13,22 @@ const persons = [
         name: "Francisco",
         street: "Calle Fronted",
         city: "New York",
+        phone: "345-456-7890",
         id: "124"
     }
 ]
 
-const typeDefinitions = gql`
+const typeDefs = gql`
+    type Address {
+        street: String!
+        city: String!
+    }
+
     type Person {
+        id: String,
         name: String!
         phone: String
-        street: String!,
-        city: String,
-        id: String
+        address: Address
     }
 
     type Query {
@@ -30,6 +36,17 @@ const typeDefinitions = gql`
         allPeople: [Person]!
         findPerson(name:String!):Person
     }
+
+    type Mutation{
+        addPerson(
+            name:String!
+            phone:String
+            street:String!
+            city:String!
+        ):Person
+    }
+
+
 `
 
 const resolvers = {
@@ -40,11 +57,29 @@ const resolvers = {
             const {name} = args;
             return persons.find(person => person.name === name);
         }
+    },
+    Mutation: {
+        addPerson: (root, args) => {
+            if (persons.find(p=>p.name === args.name)) {
+                throw new UserInputError("Name already exists")
+            }
+            const person = {...args, id: uuid()}
+            persons.push(person);
+            return person;
+        }
+    },
+    Person: {
+        address: (root) => {
+            return {
+                street: root.street,
+                city: root.city
+            }
+        },
     }
 }
 
 const server = new ApolloServer({
-    typeDefs: typeDefinitions,
+    typeDefs,
     resolvers
 })
 
