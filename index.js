@@ -7,14 +7,20 @@ const persons = [
         phone: "123-456-7890",
         street: "Calle Fronted",
         city: "New York",
-        id: "123"
+        id: "123-34534-5-34-53-45-"
     },
     {
         name: "Francisco",
         street: "Calle Fronted",
         city: "New York",
         phone: "345-456-7890",
-        id: "124"
+        id: "124-24-23-42-34-2-34"
+    },
+    {
+        name: "Tester",
+        street: "Calle Fronted",
+        city: "New York",
+        id: "124-24-234-2-34-23-4"
     }
 ]
 
@@ -33,7 +39,7 @@ const typeDefs = gql`
 
     type Query {
         peopleCount: Int!
-        allPeople: [Person]!
+        allPeople(phone: YesNo): [Person]!
         findPerson(name:String!):Person
     }
 
@@ -44,6 +50,12 @@ const typeDefs = gql`
             street:String!
             city:String!
         ):Person
+        editPhone(name:String!,phone:String!):Person
+    }
+
+    enum YesNo {
+        YES
+        NO
     }
 
 
@@ -52,7 +64,10 @@ const typeDefs = gql`
 const resolvers = {
     Query: {
         peopleCount: () => persons.length,
-        allPeople: () => persons,
+        allPeople: (root, args) => {
+            if (!args.phone) return persons;
+            return persons.filter(p => args.phone === 'YES' ? p.phone : !p.phone)
+        },
         findPerson: (root, args) => {
             const {name} = args;
             return persons.find(person => person.name === name);
@@ -60,12 +75,23 @@ const resolvers = {
     },
     Mutation: {
         addPerson: (root, args) => {
-            if (persons.find(p=>p.name === args.name)) {
+            if (persons.find(p => p.name === args.name)) {
                 throw new UserInputError("Name already exists")
             }
             const person = {...args, id: uuid()}
             persons.push(person);
             return person;
+        },
+        editPhone: (root, args) => {
+            const personIndex = persons.findIndex(p => p.name === args.name);
+            if (personIndex === -1) return null;
+
+            const person = persons[personIndex];
+
+            const updatedPerson = {...person, phone: args.phone};
+            persons[personIndex] = updatedPerson;
+
+            return updatedPerson
         }
     },
     Person: {
